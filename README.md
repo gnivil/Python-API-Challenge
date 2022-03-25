@@ -170,7 +170,7 @@ clean_city_data.to_csv(output_data_file, index_label="City_ID")
 
 -----
 
-## Create a series of scatter plots to showcase various relationships with Latitude
+## Created a series of scatter plots showcasing various relationships with Latitude
 
 -----
 
