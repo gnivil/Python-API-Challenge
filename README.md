@@ -365,3 +365,126 @@ y_values = southern_hemi_df["Wind Speed"]
 plot_linear_regression(x_values, y_values, 'Wind Speed', (-50, 20))
 ```
 -----
+
+# Part II - VacationPy
+
+Used OpenWeatherMap API data, jupyter-gmaps, and Google Places API to plan future vacations. 
+
+-----
+
+## Set up jupyter notebook
+
+```python
+# Dependencies and Setup
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import requests
+import gmaps
+import os
+
+# Import API key
+from config import g_key
+```
+
+## Created a heat map that displays the humidity for every city from Part I
+* Loaded the cities.csv exported in WeatherPy to a DataFrame
+* Configured gmaps
+* Used the Lat and Lng as locations and Humidity as weight
+* Added Heatmap layer to map
+
+```python
+# Store csv created in WeatherPy into a DataFrame
+city_data_df = pd.read_csv("output_data/cities.csv")
+city_data_df.head()
+
+# Configure gmaps
+gmaps.configure(api_key=g_key)
+
+# Heatmap of humidity
+locations = city_data_df[["Lat", "Lng"]]
+humidity = city_data_df["Humidity"]
+fig = gmaps.figure()
+heat_layer = gmaps.heatmap_layer(locations, weights=humidity, dissipating=False, max_intensity=300, point_radius=5)
+
+fig.add_layer(heat_layer)
+fig
+```
+
+## Narrowed down DataFrame to find ideal vacation location
+* Created new DataFrame fitting weather criteria (temparature between 70 an 80 degrees farenheit, wind speed less than 10mph, zero cloudiness)
+* Dropped any rows that did not meet all three conditions
+* Dropped any rows with null values
+
+```python
+# Narrow down cities that fit criteria and drop any results with null values
+narrowed_city_df = city_data_df.loc[(city_data_df["Max Temp"] < 80) & (city_data_df["Max Temp"] > 70) \
+                                    & (city_data_df["Wind Speed"] < 10) \
+                                    & (city_data_df["Cloudiness"] == 0)].dropna()
+narrowed_city_df
+```
+
+## Created hotel map of hotels near the selected cities
+* Used Google Places API to find each city's coordinates
+* Found the first hotel within 5000 meters of set coordinates
+* Added "Hotel Name" column to the DataFrame
+* Stored the first Hotel result into the DataFrame
+* Plotted markers on to of the heatmap
+
+```python
+# Create DataFrame called hotel_df to store hotel names along with city, country and coordinates
+hotel_df = narrowed_city_df[["City", "Country", "Lat", "Lng"]].copy()
+hotel_df["Hotel Name"] = ""
+hotel_df
+
+# Set parameters to search for a hotel
+params = {
+    "radius": 5000,
+    "types": "lodging",
+    "key": g_key
+}
+
+# Iterate through 
+for index, row in hotel_df.iterrows():
+    # get lat, lng from df
+    lat = row["Lat"]
+    lng = row["Lng"]
+    
+    params["location"] = f"{lat},{lng}"
+    
+    # Use the search term: "Hotel" and our lat/lng
+    base_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+
+    # make request and print url
+    name_address = requests.get(base_url, params=params)
+    
+    # convert to json
+    name_address = name_address.json()
+    
+    # Grab the first hotel from the results and store the name
+    try:
+        hotel_df.loc[index, "Hotel Name"] = name_address["results"][0]["name"]
+    except (KeyError, IndexError):
+        print("Missing field/result... skipping.")
+
+hotel_df
+
+# Using the template add the hotel marks to the heatmap
+info_box_template = """
+<dl>
+<dt>Name</dt><dd>{Hotel Name}</dd>
+<dt>City</dt><dd>{City}</dd>
+<dt>Country</dt><dd>{Country}</dd>
+</dl>
+"""
+# Store the DataFrame Row
+hotel_info = [info_box_template.format(**row) for index, row in hotel_df.iterrows()]
+locations = hotel_df[["Lat", "Lng"]]
+
+# Add marker layer ontop of heat map
+marker_layer = gmaps.marker_layer(locations, info_box_content=hotel_info)
+fig.add_layer(marker_layer)
+
+# Display figure
+fig
+```
