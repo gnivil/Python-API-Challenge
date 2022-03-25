@@ -8,7 +8,7 @@ Created a Python script to visualize the weather of 500+ cities across the world
 
 -----
 
-# Set up jupyter notebook 
+## Set up jupyter notebook 
 
 ```python
 # Dependencies and Setup
@@ -145,95 +145,223 @@ city_data_pd.head()
 ## Inspect data and remove cities where humidity > 100%
 Skip this step if no cities have humidity > 100%
 
+```python
+city_data_pd.describe()
 
+#  Get the indices of cities that have humidity over 100%
+dirty_city_data = city_data_pd[(city_data_pd["Humidity"] > 100)].index                  
+dirty_city_data
 
-The first requirement is to create a series of scatter plots to showcase the following relationships:
+# Make a new DataFrame equal to city_data to drop all humidity outliers by index
+# Passing "inplace=False" will make a copy of the city_data DataFrame, which will be called "clean_city_data".
+clean_city_data = city_data_pd.drop(dirty_city_data, inplace=False)
+clean_city_data.head()
 
-Temperature (F) vs. Latitude
-Humidity (%) vs. Latitude
-Cloudiness (%) vs. Latitude
-Wind Speed (mph) vs. Latitude
+# Extract relevant fields from the DataFrame
+lats = clean_city_data["Lat"]
+max_temps = clean_city_data["Max Temp"]
+humidity = clean_city_data["Humidity"]
+cloudiness = clean_city_data["Cloudiness"]
+wind_speed = clean_city_data["Wind Speed"]
 
-After each plot, add a sentence or two explaining what the code is analyzing.
-The second requirement is to run linear regression on each relationship. This time, separate the plots into Northern Hemisphere (greater than or equal to 0 degrees latitude) and Southern Hemisphere (less than 0 degrees latitude):
-
-Northern Hemisphere - Temperature (F) vs. Latitude
-Southern Hemisphere - Temperature (F) vs. Latitude
-Northern Hemisphere - Humidity (%) vs. Latitude
-Southern Hemisphere - Humidity (%) vs. Latitude
-Northern Hemisphere - Cloudiness (%) vs. Latitude
-Southern Hemisphere - Cloudiness (%) vs. Latitude
-Northern Hemisphere - Wind Speed (mph) vs. Latitude
-Southern Hemisphere - Wind Speed (mph) vs. Latitude
-
-After each pair of plots, take the time to explain what the linear regression is modeling. For example, describe any relationships you notice and any other analysis you may have.
-Your final notebook must:
-
-Randomly select at least 500 unique (non-repeat) cities based on latitude and longitude.
-Perform a weather check on each of the cities using a series of successive API calls.
-Include a print log of each city as it's being processed with the city number and city name.
-Save a CSV of all retrieved data and a PNG image for each scatter plot.
+# Export the city_data into a csv
+clean_city_data.to_csv(output_data_file, index_label="City_ID")
+```
 
 -----
 
-# Observable Trends
-
-* Based on the calculated total tumor volume displayed in the box plots below, Capomulin and Ramicane seem to be more effective than Infubinol and Ceftamine.
-
-* The data collected from this study is very statistically significant becaue we only observe one outlier.
-
-* Based on the strong r-correlation (.84) between mouse weight and tumor volume, drug regimens are less effective on heavier mice.
+## Create a series of scatter plots to showcase various relationships with Latitude
 
 -----
 
-# Set up jupyter notebook
+## Temperature (F) vs. Latitude
+```python
+# Build scatter plot for latitude vs. temperature
+plt.scatter(lats, 
+            max_temps,
+            edgecolor="black", linewidths=1, marker="o", 
+            alpha=0.8, label="Cities")
+
+# Incorporate the other graph properties
+plt.title("City Latitude vs. Max Temperature (%s)" % time.strftime("%x"))
+plt.ylabel("Max Temperature (F)")
+plt.xlabel("Latitude")
+plt.grid(True)
+
+# Save the figure 
+plt.savefig("output_data/Fig1.png")
+
+# Show plot
+plt.show()
+```
+## Humidity (%) vs. Latitude
+```python
+# Build the scatter plots for latitude vs. humidity
+plt.scatter(lats, 
+            humidity,
+            edgecolor="black", linewidths=1, marker="o", 
+            alpha=0.8, label="Cities")
+
+# Incorporate the other graph properties
+plt.title("City Latitude vs. Humidity (%s)" % time.strftime("%x"))
+plt.ylabel("Humidity (%)")
+plt.xlabel("Latitude")
+plt.grid(True)
+
+# Save the figure
+plt.savefig("output_data/Fig2.png")
+
+# Show plot
+plt.show()
+```
+## Cloudiness (%) vs. Latitude
+```python
+# Build the scatter plots for latitude vs. cloudiness
+plt.scatter(lats, 
+            cloudiness,
+            edgecolor="black", linewidths=1, marker="o", 
+            alpha=0.8, label="Cities")
+
+# Incorporate the other graph properties
+plt.title("City Latitude vs. Cloudiness (%s)" % time.strftime("%x"))
+plt.ylabel("Cloudiness (%)")
+plt.xlabel("Latitude")
+plt.grid(True)
+
+# Save the figure
+plt.savefig("output_data/Fig3.png")
+
+# Show plot
+plt.show()
+```
+## Wind Speed (mph) vs. Latitude
+```python
+# Build the scatter plots for latitude vs. wind speed
+plt.scatter(lats, 
+            wind_speed,
+            edgecolor="black", linewidths=1, marker="o", 
+            alpha=0.8, label="Cities")
+
+# Incorporate the other graph properties
+plt.title("City Latitude vs. Wind Speed (%s)" % time.strftime("%x"))
+plt.ylabel("Wind Speed (mph)")
+plt.xlabel("Latitude")
+plt.grid(True)
+
+# Save the figure
+plt.savefig("output_data/Fig4.png")
+
+# Show plot
+plt.show()
+```
+
+-----
+
+## Linear Regression
+Ran a linear regression on each regression. Seperated the plots into Northern Hemisphere (greater than or equal to 0 degrees latitude) and Souther Hemisphere (less than 0 degrees latitude): 
+* Northern Hemisphere - Temperature (F) vs. Latitude
+* Southern Hemisphere - Temperature (F) vs. Latitude
+* Northern Hemisphere - Humidity (%) vs. Latitude
+* Southern Hemisphere - Humidity (%) vs. Latitude
+* Northern Hemisphere - Cloudiness (%) vs. Latitude
+* Southern Hemisphere - Cloudiness (%) vs. Latitude
+* Northern Hemisphere - Wind Speed (mph) vs. Latitude
+* Southern Hemisphere - Wind Speed (mph) vs. Latitude
 
 ```python
-# Dependencies and Setup
-import matplotlib.pyplot as plt
-import pandas as pd
-import scipy.stats as st
+# Create a function to create Linear Regression plots
+def plot_linear_regression(x_values, y_values, title, text_coordinates):
+    
+    # Run regresson on southern hemisphere
+    (slope, intercept, rvalue, pvalue, stderr) = linregress(x_values, y_values)
+    regress_values = x_values * slope + intercept
+    line_eq = "y = " + str(round(slope,2)) + "x + " + str(round(intercept,2))
 
-# Study data files
-mouse_metadata_path = "data/Mouse_metadata.csv"
-study_results_path = "data/Study_results.csv"
+    # Plot
+    plt.scatter(x_values,y_values)
+    plt.plot(x_values,regress_values,"r-")
+    plt.annotate(line_eq,text_coordinates,fontsize=15,color="red")
+    plt.xlabel('Latitude')
+    plt.ylabel(title)
+    print(f"r-value: {rvalue**2}")
+    plt.show()
+
+# Create Northern and Southern Hemisphere DataFrames
+northern_hemi_df = city_data_pd.loc[(city_data_pd["Lat"] >= 0)]
+southern_hemi_df = city_data_pd.loc[(city_data_pd["Lat"] < 0)]
 ```
 
 -----
 
-# New Mouse Data DataFrame
+## Northern Hemisphere - Temperature (F) vs. Latitude
 
-* Before beginning the analysis, check the data for any mouse ID with duplicate time points and remove any data associated with that mouse ID.
-
-```Python
-# Read and display the mouse data
-mouse_metadata = pd.read_csv(mouse_metadata_path)
-mouse_metadata.sample(10)
-
-# Read and display the study results
-study_results = pd.read_csv(study_results_path)
-study_results.sample(10)
-
-# Combine the data into a single dataset
-mouse_study = pd.merge(mouse_metadata, study_results, on='Mouse ID')
-
-# Display the data table for preview
-mouse_study.sample(10)
-
-# Checking the number of mice.
-len(mouse_study)
-
-# Getting the duplicate mice by ID number that shows up for Mouse ID and Timepoint. 
-# Optional: Get all the data for the duplicate mouse ID. 
-duplicate_mice = mouse_study[mouse_study.duplicated(['Mouse ID','Timepoint'])]
-duplicate_mice
-
-# Create a clean DataFrame by dropping the duplicate mouse by its ID.
-mouse_study.drop(mouse_study[mouse_study['Mouse ID']=='g989'].index, inplace=True)
-mouse_study
-
-# Checking the number of mice in the clean DataFrame.
-len(mouse_study)
+```python
+# Linear regression on Northern Hemisphere
+x_values = northern_hemi_df["Lat"]
+y_values = northern_hemi_df["Max Temp"]
+plot_linear_regression(x_values, y_values, 'Max Temp',(6,30))
 ```
 
+## Southern Hemisphere - Temperature (F) vs. Latitude
+
+```python
+# Linear regression on Southern Hemisphere
+x_values = southern_hemi_df["Lat"]
+y_values = southern_hemi_df["Max Temp"]
+plot_linear_regression(x_values, y_values, 'Max Temp', (-55, 90))
+```
+
+## Northern Hemisphere - Humidity (%) vs. Latitude
+
+```python
+# Northern Hemisphere
+x_values = northern_hemi_df["Lat"]
+y_values = northern_hemi_df["Humidity"]
+plot_linear_regression(x_values, y_values, 'Humidity',(40,10))
+```
+
+## Southern Hemisphere - Humidity (%) vs. Latitude
+
+```python
+# Southern Hemisphere
+x_values = southern_hemi_df["Lat"]
+y_values = southern_hemi_df["Humidity"]
+plot_linear_regression(x_values, y_values, 'Humidity', (-50, 20))
+```
+
+## Northern Hemisphere - Cloudiness (%) vs. Latitude
+
+```python
+# Northern Hemisphere
+x_values = northern_hemi_df["Lat"]
+y_values = northern_hemi_df["Cloudiness"]
+plot_linear_regression(x_values, y_values, 'Cloudiness', (40,10))
+```
+
+## Southern Hemisphere - Cloudiness (%) vs. Latitude
+
+```python
+# Southern Hemisphere
+x_values = southern_hemi_df["Lat"]
+y_values = southern_hemi_df["Cloudiness"]
+plot_linear_regression(x_values, y_values, 'Cloudiness', (-30,30))
+```
+
+## Northern Hemisphere - Wind Speed (mph) vs. Latitude
+
+```python
+# Northern Hemisphere
+x_values = northern_hemi_df["Lat"]
+y_values = northern_hemi_df["Wind Speed"]
+plot_linear_regression(x_values, y_values, 'Wind Speed', (40,25))
+```
+
+## Southern Hemisphere - Wind Speed (mph) vs. Latitude
+
+```python
+# Southern Hemisphere
+x_values = southern_hemi_df["Lat"]
+y_values = southern_hemi_df["Wind Speed"]
+plot_linear_regression(x_values, y_values, 'Wind Speed', (-50, 20))
+```
 -----
